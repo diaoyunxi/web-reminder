@@ -8,6 +8,7 @@ import struct
 import zlib
 from pathlib import Path
 
+
 def create_png(width, height, svg_content):
     """Create a simple PNG from SVG content"""
     
