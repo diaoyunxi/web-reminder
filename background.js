@@ -5,6 +5,9 @@ let notificationSettings = {
   requireInteraction: false
 };
 
+// 安全上限：防止 totalChanges 无限增长导致存储膨胀或整数溢出
+const MAX_TOTAL_CHANGES = 999999;
+
 let stats = {
   totalChanges: 0,
   lastChangeTime: null
@@ -17,6 +20,13 @@ chrome.storage.local.get(['notificationSettings', 'stats'], (result) => {
   }
   if (result.stats) {
     stats = { ...stats, ...result.stats };
+    // 防御性校验：确保加载的 totalChanges 为合法数值且不超上限
+    if (typeof stats.totalChanges !== 'number' || isNaN(stats.totalChanges)) {
+      stats.totalChanges = 0;
+    }
+    if (stats.totalChanges > MAX_TOTAL_CHANGES) {
+      stats.totalChanges = MAX_TOTAL_CHANGES;
+    }
   }
   console.log('UI Change Detector: Settings loaded', notificationSettings);
 });
@@ -55,8 +65,10 @@ async function handleUICChange(notificationData, sender) {
     return;
   }
 
-  // Update stats
-  stats.totalChanges++;
+  // Update stats with safety cap
+  if (stats.totalChanges < MAX_TOTAL_CHANGES) {
+    stats.totalChanges++;
+  }
   stats.lastChangeTime = new Date().toISOString();
   chrome.storage.local.set({ stats });
   
@@ -79,69 +91,26 @@ async function handleUICChange(notificationData, sender) {
 
   try {
     const notificationId = await chrome.notifications.create('', notificationOptions);
-    
-    // Store tab info for click handling
-    if (tabId) {
-      await chrome.storage.local.set({ 
-        lastNotificationTabId: tabId,
-        lastNotificationUrl: url 
-      });
-    }
-
-    console.log('Notification sent:', notificationId);
+    console.log('Notification created:', notificationId);
   } catch (error) {
-    console.error('Failed to send notification:', error);
+    console.error('Failed to create notification:', error);
   }
 }
 
-async function sendTestNotification() {
-  const notificationOptions = {
+function sendTestNotification() {
+  const testOptions = {
     type: 'basic',
     iconUrl: 'icons/icon128.png',
-    title: 'Test Notification',
-    message: 'This is a test notification from Web UI Change Detector',
-    silent: !notificationSettings.sound,
-    requireInteraction: notificationSettings.requireInteraction
+    title: 'Web Reminder Test',
+    message: 'This is a test notification to verify the extension is working.',
+    silent: !notificationSettings.sound
   };
 
-  try {
-    const notificationId = await chrome.notifications.create('', notificationOptions);
-    console.log('Test notification sent:', notificationId);
-  } catch (error) {
-    console.error('Failed to send test notification:', error);
-  }
-}
-
-// Handle notification click
-chrome.notifications.onClicked.addListener(async (notificationId) => {
-  const data = await chrome.storage.local.get(['lastNotificationTabId', 'lastNotificationUrl']);
-  
-  if (data.lastNotificationTabId) {
-    try {
-      // Get tab info to get windowId
-      const tab = await chrome.tabs.get(data.lastNotificationTabId);
-      
-      // Activate the tab
-      await chrome.tabs.update(data.lastNotificationTabId, { active: true });
-      
-      // Focus the window
-      if (tab.windowId) {
-        await chrome.windows.update(tab.windowId, { focused: true });
-      }
-      
-      console.log('Navigated to tab:', data.lastNotificationTabId);
-    } catch (error) {
-      console.error('Failed to activate tab:', error);
-      // If tab doesn't exist, open URL in new tab
-      if (data.lastNotificationUrl) {
-        chrome.tabs.create({ url: data.lastNotificationUrl });
-      }
+  chrome.notifications.create('', testOptions, (id) => {
+    if (chrome.runtime.lastError) {
+      console.error('Test notification failed:', chrome.runtime.lastError.message);
+    } else {
+      console.log('Test notification sent:', id);
     }
-  } else if (data.lastNotificationUrl) {
-    // No tab ID, open URL in new tab
-    chrome.tabs.create({ url: data.lastNotificationUrl });
-  }
-  
-  // Clear the notification
-  chrome.notifications.clear(notificationId);
-});
+  });
+}
