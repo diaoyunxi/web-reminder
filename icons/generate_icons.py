@@ -8,15 +8,16 @@ import struct
 import zlib
 from pathlib import Path
 
-def create_png(width, height, svg_content):
-    """Create a simple PNG from SVG content"""
-    
-    # Simple SVG to PNG conversion (basic implementation)
-    # For production use, consider using PIL/Pillow or cairosvg
-    
+def create_png(width, height):
+    """Create a simple bell-icon PNG at the given size.
+
+    Renders a hardcoded blue circle with white bell shape.
+    For true SVG-to-PNG conversion, consider using PIL/Pillow or cairosvg.
+    """
+
     def png_chunk(chunk_type, data):
-        chunk_len = struct.pack('>I', len(data))
-        chunk_crc = struct.pack('>I', zlib.crc32(chunk_type + data) & 0xffffffff)
+        chunk_len = struct.pack(">I", len(data))
+        chunk_crc = struct.pack(">I", zlib.crc32(chunk_type + data) & 0xffffffff)
         return chunk_len + chunk_type + data + chunk_crc
     
     # Create a simple blue gradient background with white bell icon
@@ -100,7 +101,7 @@ def main():
     sizes = [16, 48, 128]
     
     for size in sizes:
-        png_data = create_png(size, size, None)
+        png_data = create_png(size, size)
         output_path = icons_dir / f'icon{size}.png'
         
         with open(output_path, 'wb') as f:
