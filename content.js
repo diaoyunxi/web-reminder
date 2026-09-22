@@ -8,6 +8,10 @@
   const COOLDOWN_PERIOD = 5000; // 5 seconds cooldown between notifications
   let lastNotificationTime = 0;
 
+  // Store observer references for cleanup
+  let mainObserver = null;
+  let titleObserver = null;
+
   // Generate a snapshot of the current UI state
   function generateSnapshot() {
     const body = document.body;
@@ -93,9 +97,25 @@
     }, DEBOUNCE_DELAY);
   }
 
+  // Cleanup observers and timers on page unload
+  function cleanup() {
+    if (mainObserver) {
+      mainObserver.disconnect();
+      mainObserver = null;
+    }
+    if (titleObserver) {
+      titleObserver.disconnect();
+      titleObserver = null;
+    }
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+      debounceTimer = null;
+    }
+  }
+
   // Initialize MutationObserver
   function initObserver() {
-    const observer = new MutationObserver((mutations) => {
+    mainObserver = new MutationObserver((mutations) => {
       let hasSignificantChange = false;
       
       for (const mutation of mutations) {
@@ -126,7 +146,7 @@
     });
 
     // Start observing
-    observer.observe(document.body, {
+    mainObserver.observe(document.body, {
       childList: true,
       subtree: true,
       attributes: true,
@@ -137,7 +157,7 @@
     // Also observe title changes
     const titleElement = document.querySelector('title');
     if (titleElement) {
-      const titleObserver = new MutationObserver(() => {
+      titleObserver = new MutationObserver(() => {
         handleUIChange('title_change', { 
           message: `Page title changed to: ${document.title}` 
         });
@@ -149,6 +169,9 @@
         subtree: true
       });
     }
+
+    // Register cleanup on page unload
+    window.addEventListener('beforeunload', cleanup);
 
     // Capture initial snapshot
     lastSnapshot = generateSnapshot();
