@@ -65,8 +65,10 @@ async function handleUICChange(notificationData, sender) {
 
   const title = notificationData.title || 'UI Change Detected';
   const message = notificationData.message || 'A change has been detected on the page.';
-  const tabId = notificationData.tabId;
-  const url = notificationData.url;
+  // 优先使用 sender.tab.id（来自 content script 消息通道），
+  // 回退到 notificationData.tabId（由调用方显式传入）
+  const tabId = (sender && sender.tab && sender.tab.id) || notificationData.tabId;
+  const url = (sender && sender.tab && sender.tab.url) || notificationData.url;
 
   const notificationOptions = {
     type: 'basic',
