@@ -36,17 +36,30 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'UI_CHANGE_DETECTED') {
-    handleUICChange(message.payload, sender);
-    sendResponse({ received: true });
+    // Await async handleUICChange before responding to ensure the notification
+    // is actually created before the caller receives confirmation.
+    handleUICChange(message.payload, sender)
+      .then(() => sendResponse({ received: true }))
+      .catch((err) => {
+        console.error('handleUICChange failed:', err);
+        sendResponse({ received: false, error: String(err) });
+      });
+    return true; // Keep message channel open for async response
   } else if (message.type === 'TEST_NOTIFICATION') {
-    // Handle test notification from popup
-    sendTestNotification();
-    sendResponse({ received: true });
+    // Await async sendTestNotification before responding so the popup
+    // knows whether the test notification was actually delivered.
+    sendTestNotification()
+      .then(() => sendResponse({ received: true }))
+      .catch((err) => {
+        console.error('sendTestNotification failed:', err);
+        sendResponse({ received: false, error: String(err) });
+      });
+    return true; // Keep message channel open for async response
   } else if (message.type === 'GET_STATS') {
     // Return current stats to popup
     sendResponse({ stats });
   }
-  return true; // Keep message channel open for async response
+  // No return true needed for synchronous sendResponse paths
 });
 
 async function handleUICChange(notificationData, sender) {
@@ -65,8 +78,10 @@ async function handleUICChange(notificationData, sender) {
 
   const title = notificationData.title || 'UI Change Detected';
   const message = notificationData.message || 'A change has been detected on the page.';
-  const tabId = notificationData.tabId;
-  const url = notificationData.url;
+  // 优先使用 sender.tab.id（来自 content script 消息通道），
+  // 回退到 notificationData.tabId（由调用方显式传入）
+  const tabId = (sender && sender.tab && sender.tab.id) || notificationData.tabId;
+  const url = (sender && sender.tab && sender.tab.url) || notificationData.url;
 
   const notificationOptions = {
     type: 'basic',
@@ -77,21 +92,17 @@ async function handleUICChange(notificationData, sender) {
     requireInteraction: notificationSettings.requireInteraction
   };
 
-  try {
-    const notificationId = await chrome.notifications.create('', notificationOptions);
-    
-    // Store tab info for click handling
-    if (tabId) {
-      await chrome.storage.local.set({ 
-        lastNotificationTabId: tabId,
-        lastNotificationUrl: url 
-      });
-    }
-
-    console.log('Notification sent:', notificationId);
-  } catch (error) {
-    console.error('Failed to send notification:', error);
+  const notificationId = await chrome.notifications.create('', notificationOptions);
+  
+  // Store tab info for click handling
+  if (tabId) {
+    await chrome.storage.local.set({ 
+      lastNotificationTabId: tabId,
+      lastNotificationUrl: url 
+    });
   }
+
+  console.log('Notification sent:', notificationId);
 }
 
 async function sendTestNotification() {
@@ -104,12 +115,8 @@ async function sendTestNotification() {
     requireInteraction: notificationSettings.requireInteraction
   };
 
-  try {
-    const notificationId = await chrome.notifications.create('', notificationOptions);
-    console.log('Test notification sent:', notificationId);
-  } catch (error) {
-    console.error('Failed to send test notification:', error);
-  }
+  const notificationId = await chrome.notifications.create('', notificationOptions);
+  console.log('Test notification sent:', notificationId);
 }
 
 // Handle notification click
