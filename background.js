@@ -80,12 +80,16 @@ async function handleUICChange(notificationData, sender) {
   try {
     const notificationId = await chrome.notifications.create('', notificationOptions);
     
-    // Store tab info for click handling
-    if (tabId) {
-      await chrome.storage.local.set({ 
-        lastNotificationTabId: tabId,
-        lastNotificationUrl: url 
-      });
+    // Store per-notification tab info for click handling (keyed by notificationId)
+    if (tabId || url) {
+      const notifMap = (await chrome.storage.local.get('notificationTabs')).notificationTabs || {};
+      notifMap[notificationId] = { tabId: tabId || null, url: url || null };
+      // 限制存储条目数，防止无限增长（保留最近 20 条）
+      const keys = Object.keys(notifMap);
+      if (keys.length > 20) {
+        keys.slice(0, keys.length - 20).forEach(k => delete notifMap[k]);
+      }
+      await chrome.storage.local.set({ notificationTabs: notifMap });
     }
 
     console.log('Notification sent:', notificationId);
@@ -112,36 +116,35 @@ async function sendTestNotification() {
   }
 }
 
-// Handle notification click
+// Handle notification click - look up the specific tab for this notification
 chrome.notifications.onClicked.addListener(async (notificationId) => {
-  const data = await chrome.storage.local.get(['lastNotificationTabId', 'lastNotificationUrl']);
-  
-  if (data.lastNotificationTabId) {
+  const data = await chrome.storage.local.get('notificationTabs');
+  const notifMap = data.notificationTabs || {};
+  const entry = notifMap[notificationId];
+
+  // 清理已点击的通知记录
+  delete notifMap[notificationId];
+  await chrome.storage.local.set({ notificationTabs: notifMap });
+
+  const tabId = entry && entry.tabId;
+  const url = entry && entry.url;
+
+  if (tabId) {
     try {
-      // Get tab info to get windowId
-      const tab = await chrome.tabs.get(data.lastNotificationTabId);
-      
-      // Activate the tab
-      await chrome.tabs.update(data.lastNotificationTabId, { active: true });
-      
-      // Focus the window
+      const tab = await chrome.tabs.get(tabId);
+      await chrome.tabs.update(tabId, { active: true });
       if (tab.windowId) {
         await chrome.windows.update(tab.windowId, { focused: true });
       }
-      
-      console.log('Navigated to tab:', data.lastNotificationTabId);
     } catch (error) {
       console.error('Failed to activate tab:', error);
-      // If tab doesn't exist, open URL in new tab
-      if (data.lastNotificationUrl) {
-        chrome.tabs.create({ url: data.lastNotificationUrl });
+      if (url) {
+        chrome.tabs.create({ url: url });
       }
     }
-  } else if (data.lastNotificationUrl) {
-    // No tab ID, open URL in new tab
-    chrome.tabs.create({ url: data.lastNotificationUrl });
+  } else if (url) {
+    chrome.tabs.create({ url: url });
   }
   
-  // Clear the notification
   chrome.notifications.clear(notificationId);
 });
