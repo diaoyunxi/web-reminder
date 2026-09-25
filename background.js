@@ -55,7 +55,14 @@ async function handleUICChange(notificationData, sender) {
     return;
   }
 
-  // Update stats
+  // Update stats atomically: read latest from storage, increment, write back
+  // This prevents stale in-memory values from overwriting concurrent updates
+  try {
+    const stored = await chrome.storage.local.get('stats');
+    if (stored.stats) {
+      stats = { ...stats, ...stored.stats };
+    }
+  } catch (_) {}
   stats.totalChanges++;
   stats.lastChangeTime = new Date().toISOString();
   chrome.storage.local.set({ stats });
