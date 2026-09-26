@@ -1,4 +1,9 @@
 // Background service worker for UI Change Detector
+/**
+ * @constant {number} Chrome storage 配额上限 (bytes)
+ * chrome.storage.local 默认 10MB，启用 unlimitedStorage 后无限制
+ */
+const STORAGE_QUOTA_BYTES = 10 * 1024 * 1024; // 10MB
 let notificationSettings = {
   enabled: true,
   sound: true,
