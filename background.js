@@ -1,3 +1,6 @@
+const STORAGE_QUOTA_BYTES = 10 * 1024 * 1024;
+const STORAGE_CLEANUP_THRESHOLD = 8 * 1024 * 1024;
+
 // Background service worker for UI Change Detector
 let notificationSettings = {
   enabled: true,
