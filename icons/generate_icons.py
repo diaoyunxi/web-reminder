@@ -8,6 +8,7 @@ import struct
 import zlib
 from pathlib import Path
 
+
 def create_png(width, height):
     """Create a simple bell-icon PNG at the given size.
 
