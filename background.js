@@ -1,4 +1,9 @@
 // Background service worker for UI Change Detector
+/**
+ * @constant {number} Chrome storage 配额上限 (bytes)
+ * chrome.storage.local 默认 10MB，启用 unlimitedStorage 后无限制
+ */
+const STORAGE_QUOTA_BYTES = 10 * 1024 * 1024; // 10MB
 let notificationSettings = {
   enabled: true,
   sound: true,
@@ -36,17 +41,30 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'UI_CHANGE_DETECTED') {
-    handleUICChange(message.payload, sender);
-    sendResponse({ received: true });
+    // Await async handleUICChange before responding to ensure the notification
+    // is actually created before the caller receives confirmation.
+    handleUICChange(message.payload, sender)
+      .then(() => sendResponse({ received: true }))
+      .catch((err) => {
+        console.error('handleUICChange failed:', err);
+        sendResponse({ received: false, error: String(err) });
+      });
+    return true; // Keep message channel open for async response
   } else if (message.type === 'TEST_NOTIFICATION') {
-    // Handle test notification from popup
-    sendTestNotification();
-    sendResponse({ received: true });
+    // Await async sendTestNotification before responding so the popup
+    // knows whether the test notification was actually delivered.
+    sendTestNotification()
+      .then(() => sendResponse({ received: true }))
+      .catch((err) => {
+        console.error('sendTestNotification failed:', err);
+        sendResponse({ received: false, error: String(err) });
+      });
+    return true; // Keep message channel open for async response
   } else if (message.type === 'GET_STATS') {
     // Return current stats to popup
     sendResponse({ stats });
   }
-  return true; // Keep message channel open for async response
+  // No return true needed for synchronous sendResponse paths
 });
 
 async function handleUICChange(notificationData, sender) {
@@ -55,7 +73,14 @@ async function handleUICChange(notificationData, sender) {
     return;
   }
 
-  // Update stats
+  // Update stats atomically: read latest from storage, increment, write back
+  // This prevents stale in-memory values from overwriting concurrent updates
+  try {
+    const stored = await chrome.storage.local.get('stats');
+    if (stored.stats) {
+      stats = { ...stats, ...stored.stats };
+    }
+  } catch (_) {}
   stats.totalChanges++;
   stats.lastChangeTime = new Date().toISOString();
   chrome.storage.local.set({ stats });
@@ -65,8 +90,10 @@ async function handleUICChange(notificationData, sender) {
 
   const title = notificationData.title || 'UI Change Detected';
   const message = notificationData.message || 'A change has been detected on the page.';
-  const tabId = notificationData.tabId;
-  const url = notificationData.url;
+  // 优先使用 sender.tab.id（来自 content script 消息通道），
+  // 回退到 notificationData.tabId（由调用方显式传入）
+  const tabId = (sender && sender.tab && sender.tab.id) || notificationData.tabId;
+  const url = (sender && sender.tab && sender.tab.url) || notificationData.url;
 
   const notificationOptions = {
     type: 'basic',
@@ -79,7 +106,7 @@ async function handleUICChange(notificationData, sender) {
 
   try {
     const notificationId = await chrome.notifications.create('', notificationOptions);
-    
+
     // Store per-notification tab info for click handling (keyed by notificationId)
     if (tabId || url) {
       const notifMap = (await chrome.storage.local.get('notificationTabs')).notificationTabs || {};
@@ -108,12 +135,8 @@ async function sendTestNotification() {
     requireInteraction: notificationSettings.requireInteraction
   };
 
-  try {
-    const notificationId = await chrome.notifications.create('', notificationOptions);
-    console.log('Test notification sent:', notificationId);
-  } catch (error) {
-    console.error('Failed to send test notification:', error);
-  }
+  const notificationId = await chrome.notifications.create('', notificationOptions);
+  console.log('Test notification sent:', notificationId);
 }
 
 // Handle notification click - look up the specific tab for this notification
