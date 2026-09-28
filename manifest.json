@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Web UI Change Detector",
+  "name": "Web Reminder",
   "version": "1.0.0",
   "description": "Detects frontend UI changes and sends system notifications",
   "permissions": [
