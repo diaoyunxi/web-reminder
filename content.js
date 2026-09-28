@@ -173,6 +173,11 @@
     // Register cleanup on page unload
     window.addEventListener('beforeunload', cleanup);
 
+    // 扩展卸载时也清理资源，防止 Service Worker 挂起后残留
+    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onSuspend) {
+      chrome.runtime.onSuspend.addListener(cleanup);
+    }
+
     // Capture initial snapshot
     lastSnapshot = generateSnapshot();
     
