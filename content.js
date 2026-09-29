@@ -150,8 +150,10 @@
       childList: true,
       subtree: true,
       attributes: true,
-      attributeFilter: ['class', 'style', 'hidden', 'disabled'],
-      characterData: true
+      attributeFilter: ['class', 'style', 'hidden', 'disabled']
+      // 注意：移除 characterData: true —— 回调中未处理 characterData 类型的 mutation，
+      // 继续监听只会产生无意义的回调开销，不产生任何通知。
+      // 若未来需要监听文本内容变化，需在回调中添加 characterData 分支处理。
     });
 
     // Also observe title changes
