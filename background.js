@@ -41,12 +41,12 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'UI_CHANGE_DETECTED') {
-    // Await async handleUICChange before responding to ensure the notification
+    // Await async handleUIChange before responding to ensure the notification
     // is actually created before the caller receives confirmation.
-    handleUICChange(message.payload, sender)
+    handleUIChange(message.payload, sender)
       .then(() => sendResponse({ received: true }))
       .catch((err) => {
-        console.error('handleUICChange failed:', err);
+        console.error('handleUIChange failed:', err);
         sendResponse({ received: false, error: String(err) });
       });
     return true; // Keep message channel open for async response
@@ -67,7 +67,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   // No return true needed for synchronous sendResponse paths
 });
 
-async function handleUICChange(notificationData, sender) {
+async function handleUIChange(notificationData, sender) {
   if (!notificationSettings.enabled) {
     console.log('Notifications disabled');
     return;
