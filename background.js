@@ -29,12 +29,23 @@ chrome.storage.local.get(['notificationSettings', 'stats'], (result) => {
 // Listen for storage changes (e.g., from popup)
 chrome.storage.onChanged.addListener((changes, areaName) => {
   if (areaName === 'local') {
-    if (changes.notificationSettings) {
+    if (changes.notificationSettings && changes.notificationSettings.newValue) {
       notificationSettings = { ...notificationSettings, ...changes.notificationSettings.newValue };
       console.log('UI Change Detector: Settings updated', notificationSettings);
+    } else if (changes.notificationSettings && !changes.notificationSettings.newValue) {
+      // Key was removed — reset to defaults
+      notificationSettings = {
+        enabled: true,
+        sound: true,
+        requireInteraction: false
+      };
+      console.log('UI Change Detector: Settings reset to defaults');
     }
-    if (changes.stats) {
+    if (changes.stats && changes.stats.newValue) {
       stats = { ...stats, ...changes.stats.newValue };
+    } else if (changes.stats && !changes.stats.newValue) {
+      // stats key removed — reset counters
+      stats = { totalChanges: 0, lastChangeTime: null };
     }
   }
 });
