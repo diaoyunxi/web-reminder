@@ -76,7 +76,7 @@
       }
     }, (response) => {
       if (chrome.runtime.lastError) {
-        console.log('Failed to send message:', chrome.runtime.lastError.message);
+        console.debug('Failed to send message:', chrome.runtime.lastError.message);
       }
     });
   }
@@ -176,7 +176,7 @@
     // Capture initial snapshot
     lastSnapshot = generateSnapshot();
     
-    console.log('UI Change Detector initialized on:', window.location.href);
+    console.debug('UI Change Detector initialized on:', window.location.href);
   }
 
   // Wait for DOM to be ready
