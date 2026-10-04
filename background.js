@@ -23,7 +23,7 @@ chrome.storage.local.get(['notificationSettings', 'stats'], (result) => {
   if (result.stats) {
     stats = { ...stats, ...result.stats };
   }
-  console.log('UI Change Detector: Settings loaded', notificationSettings);
+  console.debug('UI Change Detector: Settings loaded', notificationSettings);
 });
 
 // Listen for storage changes (e.g., from popup)
@@ -31,7 +31,7 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
   if (areaName === 'local') {
     if (changes.notificationSettings) {
       notificationSettings = { ...notificationSettings, ...changes.notificationSettings.newValue };
-      console.log('UI Change Detector: Settings updated', notificationSettings);
+      console.debug('UI Change Detector: Settings updated', notificationSettings);
     }
     if (changes.stats) {
       stats = { ...stats, ...changes.stats.newValue };
@@ -69,7 +69,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 async function handleUICChange(notificationData, sender) {
   if (!notificationSettings.enabled) {
-    console.log('Notifications disabled');
+    console.debug('Notifications disabled');
     return;
   }
 
@@ -119,7 +119,7 @@ async function handleUICChange(notificationData, sender) {
       await chrome.storage.local.set({ notificationTabs: notifMap });
     }
 
-    console.log('Notification sent:', notificationId);
+    console.debug('Notification sent:', notificationId);
   } catch (error) {
     console.error('Failed to send notification:', error);
   }
@@ -136,7 +136,7 @@ async function sendTestNotification() {
   };
 
   const notificationId = await chrome.notifications.create('', notificationOptions);
-  console.log('Test notification sent:', notificationId);
+  console.debug('Test notification sent:', notificationId);
 }
 
 // Handle notification click - look up the specific tab for this notification
