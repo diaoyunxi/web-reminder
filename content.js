@@ -186,3 +186,11 @@
     initObserver();
   }
 })();
+
+
+// 页面卸载时清理 MutationObserver 防止内存泄漏 (CWE-772)
+window.addEventListener("beforeunload", () => {
+  if (typeof observer !== "undefined" && observer) {
+    observer.disconnect();
+  }
+});
