@@ -80,7 +80,7 @@ async function handleUICChange(notificationData, sender) {
     if (stored.stats) {
       stats = { ...stats, ...stored.stats };
     }
-  } catch (_) {}
+  } catch (e) { console.debug("Failed to load stats:", e); }
   stats.totalChanges++;
   stats.lastChangeTime = new Date().toISOString();
   chrome.storage.local.set({ stats });
