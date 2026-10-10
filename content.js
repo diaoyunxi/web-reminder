@@ -4,8 +4,18 @@
 
   let lastSnapshot = '';
   let debounceTimer = null;
-  const DEBOUNCE_DELAY = 1000; // 1 second debounce
-  const COOLDOWN_PERIOD = 5000; // 5 seconds cooldown between notifications
+  /**
+ * 防抖延迟时间 (毫秒)
+ * 在 UI 变化后等待 1 秒再发送通知，避免短时间内重复触发
+ * 当页面快速更新时（如动画、滚动），可有效减少通知噪音
+ */
+const DEBOUNCE_DELAY = 1000;
+  /**
+ * 冷却期时间 (毫秒)
+ * 两次通知之间至少间隔 5 秒，防止用户被频繁打扰
+ * 适用于 UI 持续变化的场景（如实时数据更新）
+ */
+const COOLDOWN_PERIOD = 5000;
   let lastNotificationTime = 0;
 
   // Store observer references for cleanup
