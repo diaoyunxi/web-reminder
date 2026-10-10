@@ -83,7 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     chrome.storage.local.set({ notificationSettings: settings }, () => {
-      console.log('Settings saved:', settings);
+      console.debug('Settings saved:', settings);
       updateStatus();
     });
   }
@@ -99,7 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (chrome.runtime.lastError) {
         console.error('Failed to send test notification:', chrome.runtime.lastError.message);
       } else {
-        console.log('Test notification sent');
+        console.debug('Test notification sent');
       }
     });
   });
