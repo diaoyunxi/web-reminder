@@ -76,7 +76,7 @@ const COOLDOWN_PERIOD = 5000;
     
     lastNotificationTime = now;
 
-    if (chrome?.runtime?.id) { chrome.runtime.sendMessage({ }
+    if (chrome?.runtime?.id) { chrome.runtime.sendMessage({
       type: 'UI_CHANGE_DETECTED',
       payload: {
         title: `UI Change: ${changeType}`,
