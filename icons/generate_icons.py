@@ -58,7 +58,9 @@ def create_png(width, height):
                     r, g, b = 255, 255, 255
 
                 # Bell top handle
-                if y < bell_top and abs(x - center_x) < radius * 0.1 and y > bell_top - radius * 0.3:
+                if (y < bell_top
+                        and abs(x - center_x) < radius * 0.1
+                        and y > bell_top - radius * 0.3):
                     r, g, b = 255, 255, 255
 
                 row.append((r, g, b))
@@ -69,24 +71,24 @@ def create_png(width, height):
 
     # Build PNG file
     # PNG signature
-    signature = b'\x89PNG\r\n\x1a\n'
+    signature = b"\x89PNG\r\n\x1a\n"
 
     # IHDR chunk
-    ihdr_data = struct.pack('>IIBBBBB', width, height, 8, 2, 0, 0, 0)
-    ihdr = png_chunk(b'IHDR', ihdr_data)
+    ihdr_data = struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0)
+    ihdr = png_chunk(b"IHDR", ihdr_data)
 
     # IDAT chunk (image data)
-    raw_data = b''
+    raw_data = b""
     for row in pixels:
-        raw_data += b'\x00'  # Filter byte (none)
+        raw_data += b"\x00"  # Filter byte (none)
         for r, g, b in row:
             raw_data += bytes([r, g, b])
 
     compressed = zlib.compress(raw_data, 9)
-    idat = png_chunk(b'IDAT', compressed)
+    idat = png_chunk(b"IDAT", compressed)
 
     # IEND chunk
-    iend = png_chunk(b'IEND', b'')
+    iend = png_chunk(b"IEND", b"")
 
     return signature + ihdr + idat + iend
 
@@ -103,9 +105,9 @@ def main():
 
     for size in sizes:
         png_data = create_png(size, size)
-        output_path = icons_dir / f'icon{size}.png'
+        output_path = icons_dir / f"icon{size}.png"
 
-        with open(output_path, 'wb') as f:
+        with open(output_path, "wb") as f:
             f.write(png_data)
 
         print(f"✓ Generated {output_path.name} ({size}x{size})")
@@ -113,5 +115,5 @@ def main():
     print("\nAll icons generated successfully!")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
