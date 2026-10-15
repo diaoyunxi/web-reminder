@@ -58,7 +58,9 @@ def create_png(width, height):
                     r, g, b = 255, 255, 255
 
                 # Bell top handle
-                if y < bell_top and abs(x - center_x) < radius * 0.1 and y > bell_top - radius * 0.3:
+                if (y < bell_top
+                        and abs(x - center_x) < radius * 0.1
+                        and y > bell_top - radius * 0.3):
                     r, g, b = 255, 255, 255
 
                 row.append((r, g, b))
